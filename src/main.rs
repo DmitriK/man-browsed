@@ -3,8 +3,6 @@ extern crate iron;
 use iron::prelude::*;
 
 fn gen_man_html(page: &str) -> String {
-    println!("{:?}", page);
-
     let html = std::process::Command::new("man")
         .arg("-Thtml")
         .arg(page)
