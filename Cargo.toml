@@ -3,8 +3,6 @@ name = "man-browsed"
 version = "0.1.0"
 authors = ["Dmitri Kourennyi <dkour@mykolab.com>"]
 
-[dependencies.iron]
-version = "^0.5"
-
 [dependencies]
 hyper = "^0.9"
+# hyperlocal = "^0.3.0"
