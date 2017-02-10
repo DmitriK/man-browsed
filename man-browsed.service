@@ -1,0 +1,7 @@
+[Unit]
+Description="Daemon for serving manual pages over HTTP"
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/man-browsed
+Type=simple
