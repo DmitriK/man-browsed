@@ -5,4 +5,3 @@ authors = ["Dmitri Kourennyi <dkour@mykolab.com>"]
 
 [dependencies]
 hyper = "^0.9"
-# hyperlocal = "^0.3.0"
