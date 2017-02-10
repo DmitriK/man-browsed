@@ -1,6 +1,23 @@
-extern crate iron;
+extern crate hyper;
 
-use iron::prelude::*;
+use hyper::server::{Server, Request, Response};
+
+
+fn manhandle(req: Request, res: Response) {
+    match req.uri {
+        hyper::uri::RequestUri::AbsolutePath(mut s) => {
+            let offset = s.find('?').unwrap_or(s.len() - 1) + 1;
+
+            // Remove the range up until the β from the string
+            let term: String = s.drain(offset..).collect();
+
+            res.send(&gen_man_html(&term).into_bytes()).unwrap();
+        },
+        _ => {
+            res.send(b"Error: Could not understand request").unwrap();
+        }
+    }
+}
 
 fn gen_man_html(page: &str) -> String {
     let html = std::process::Command::new("man")
@@ -12,14 +29,6 @@ fn gen_man_html(page: &str) -> String {
     String::from_utf8_lossy(&html.stdout).into_owned()
 }
 
-fn hello_world(req: &mut Request) -> IronResult<Response> {
-    let term = req.url.query().unwrap();
-    let html = gen_man_html(term);
-    let mime: iron::mime::Mime = "text/html".parse().unwrap();
-    Ok(Response::with((iron::status::Ok, mime, html)))
-}
-
 fn main() {
-    let chain = Chain::new(hello_world);
-    Iron::new(chain).http("localhost:3000").unwrap();
+    Server::http("0.0.0.0:3000").unwrap().handle(manhandle).unwrap();
 }
