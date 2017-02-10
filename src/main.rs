@@ -2,10 +2,10 @@ extern crate hyper;
 
 use hyper::server::{Server, Request, Response};
 
-
 fn manhandle(req: Request, res: Response) {
+    use hyper::uri::RequestUri::*;
     match req.uri {
-        hyper::uri::RequestUri::AbsolutePath(mut s) => {
+        AbsolutePath(mut s) => {
             let offset = s.find('?').unwrap_or(s.len() - 1) + 1;
 
             // Remove the range up until the β from the string
@@ -20,7 +20,8 @@ fn manhandle(req: Request, res: Response) {
 }
 
 fn gen_man_html(page: &str) -> String {
-    let html = std::process::Command::new("man")
+    use std::process::Command;
+    let html = Command::new("man")
         .arg("-Thtml")
         .arg(page)
         .output()
