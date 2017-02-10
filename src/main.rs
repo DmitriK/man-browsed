@@ -1,3 +1,4 @@
+extern crate clap;
 extern crate hyper;
 
 use hyper::server::{Server, Request, Response};
@@ -7,12 +8,9 @@ fn manhandle(req: Request, res: Response) {
     match req.uri {
         AbsolutePath(mut s) => {
             let offset = s.find('?').unwrap_or(s.len() - 1) + 1;
-
-            // Remove the range up until the β from the string
             let term: String = s.drain(offset..).collect();
-
             res.send(&gen_man_html(&term).into_bytes()).unwrap();
-        },
+        }
         _ => {
             res.send(b"Error: Could not understand request").unwrap();
         }
@@ -31,5 +29,28 @@ fn gen_man_html(page: &str) -> String {
 }
 
 fn main() {
-    Server::http("localhost:53805").unwrap().handle(manhandle).unwrap();
+    use clap::{App, Arg};
+    let args = App::new("man-browsed")
+        .version("0.1.0")
+        .about("Daemon for serving HTML man pages ")
+        .arg(Arg::with_name("address")
+            .short("a")
+            .long("addr")
+            .value_name("address")
+            .help("The address to listen for connections")
+            .default_value("127.0.0.1")
+            .takes_value(true))
+        .arg(Arg::with_name("port")
+            .short("p")
+            .long("port")
+            .value_name("PORT")
+            .help("The port to listen for connections")
+            .default_value("53805")
+            .takes_value(true))
+        .get_matches();
+
+    let addr = args.value_of("addr").unwrap_or("127.0.0.1");
+    let port = args.value_of("port").unwrap_or("").parse::<u16>().unwrap_or(53805);
+
+    Server::http((addr, port)).unwrap().handle(manhandle).unwrap();
 }
