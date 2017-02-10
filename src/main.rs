@@ -30,5 +30,5 @@ fn gen_man_html(page: &str) -> String {
 }
 
 fn main() {
-    Server::http("0.0.0.0:3000").unwrap().handle(manhandle).unwrap();
+    Server::http("localhost:53805").unwrap().handle(manhandle).unwrap();
 }
