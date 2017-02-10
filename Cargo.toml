@@ -4,4 +4,5 @@ version = "0.1.0"
 authors = ["Dmitri Kourennyi <dkour@mykolab.com>"]
 
 [dependencies]
-hyper = "^0.9"
+clap  = "^2.20"
+hyper = "^0.10"
