@@ -1,15 +1,21 @@
 extern crate clap;
 extern crate hyper;
 
+mod landing;
+
 use hyper::server::{Server, Request, Response};
 
 fn manhandle(req: Request, res: Response) {
     use hyper::uri::RequestUri::*;
     match req.uri {
         AbsolutePath(mut s) => {
-            let offset = s.find('?').unwrap_or(s.len() - 1) + 1;
+            let offset = s.rfind("?p=").unwrap_or(s.len() - 1) + 1;
             let term: String = s.drain(offset..).collect();
-            res.send(&gen_man_html(&term).into_bytes()).unwrap();
+            println!("{:?}", term);
+            match term.as_ref() {
+                "" => {res.send(landing::HTML).unwrap();}
+                _ => {res.send(&gen_man_html(&term).into_bytes()).unwrap();}
+            }
         }
         _ => {
             res.send(b"Error: Could not understand request").unwrap();
