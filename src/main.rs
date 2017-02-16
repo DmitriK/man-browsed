@@ -9,9 +9,8 @@ fn manhandle(req: Request, res: Response) {
     use hyper::uri::RequestUri::*;
     match req.uri {
         AbsolutePath(mut s) => {
-            let offset = s.rfind("?p=").unwrap_or(s.len() - 1) + 1;
+            let offset = s.find("?p=").unwrap_or(s.len() - 3) + 3;
             let term: String = s.drain(offset..).collect();
-            println!("{:?}", term);
             match term.as_ref() {
                 "" => {res.send(landing::HTML).unwrap();}
                 _ => {res.send(&gen_man_html(&term).into_bytes()).unwrap();}
