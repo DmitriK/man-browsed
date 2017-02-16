@@ -8,9 +8,8 @@ use hyper::server::{Server, Request, Response};
 fn manhandle(req: Request, res: Response) {
     use hyper::uri::RequestUri::*;
     match req.uri {
-        AbsolutePath(mut s) => {
-            let offset = s.find("?p=").unwrap_or(s.len() - 3) + 3;
-            let term: String = s.drain(offset..).collect();
+        AbsolutePath(s) => {
+            let term = String::from(s.trim_left_matches("/?p="));
             match term.as_ref() {
                 "" => {res.send(landing::HTML).unwrap();}
                 _ => {res.send(&gen_man_html(&term).into_bytes()).unwrap();}
@@ -24,9 +23,10 @@ fn manhandle(req: Request, res: Response) {
 
 fn gen_man_html(page: &str) -> String {
     use std::process::Command;
+    let words: Vec<&str> = page.split('+').collect();
     let html = Command::new("man")
         .arg("-Thtml")
-        .arg(page)
+        .args(&words)
         .output()
         .expect("failed to execute process");
 
