@@ -5,12 +5,9 @@ pkgrel=1
 pkgdesc="Daemon for serving man pages over HTML"
 arch=("any")
 url="https://github.com/DmitriK/man-browsed"
-license=('unkown')
-groups=()
+license=('GPLv3')
 depends=('systemd')
 makedepends=('git' 'rust')
-# source=()
-# md5sums=() #generate with 'makepkg -g'
 
 _gitroot=https://github.com/DmitriK/man-browsed.git
 _gitname=man-browsed
