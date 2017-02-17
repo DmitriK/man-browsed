@@ -3,21 +3,54 @@ extern crate hyper;
 
 mod landing;
 
+use std::net::IpAddr;
+use std::str::FromStr;
+
+use hyper::header;
 use hyper::server::{Server, Request, Response};
 
-fn manhandle(req: Request, res: Response) {
+enum ResponseType {
+    Landing,
+    ManPage,
+    ErrPage,
+    OpenSearch,
+}
+
+struct ManResponse {
+    res_type: ResponseType,
+    body: String,
+}
+
+fn manhandle(uri: hyper::uri::RequestUri, addr: String, port: u16) -> ManResponse {
     use hyper::uri::RequestUri::*;
-    match req.uri {
+    match uri {
         AbsolutePath(s) => {
-            let term = s.trim_left_matches("/?p=");
-            if term == s || term == "" {
-                res.send(landing::HTML).unwrap();
+            let path = s.trim_left_matches("/");
+            if path == "os.xml" {
+                return ManResponse {
+                    res_type: ResponseType::OpenSearch,
+                    body: landing::OSEARCH.replace("$addr", &addr)
+                        .replace("$port", &port.to_string()),
+                };
+            }
+            let term = path.trim_left_matches("?q=");
+            if term == path || term == "" {
+                ManResponse {
+                    res_type: ResponseType::Landing,
+                    body: landing::HTML.to_string(),
+                }
             } else {
-                res.send(&gen_man_html(&term).into_bytes()).unwrap();
+                ManResponse {
+                    res_type: ResponseType::ManPage,
+                    body: gen_man_html(&term),
+                }
             }
         }
         _ => {
-            res.send(b"Error: Could not understand request").unwrap();
+            ManResponse {
+                res_type: ResponseType::ErrPage,
+                body: "Error: Could not understand request".to_string(),
+            }
         }
     }
 }
@@ -55,8 +88,27 @@ fn main() {
             .takes_value(true))
         .get_matches();
 
-    let addr = args.value_of("addr").unwrap_or("127.0.0.1");
+    let addr = args.value_of("addr").unwrap_or("127.0.0.1").to_string();
     let port = args.value_of("port").unwrap_or("").parse::<u16>().unwrap_or(53805);
 
-    Server::http((addr, port)).unwrap().handle(manhandle).unwrap();
+    let serve = Server::http((IpAddr::from_str(&addr).unwrap(), port)).unwrap();
+    let addr = addr;
+    serve.handle(move |req: Request, mut res: Response| {
+            let resp = manhandle(req.uri, addr.clone(), port);
+
+            match resp.res_type {
+                ResponseType::OpenSearch => {
+                    let hdr = res.headers_mut();
+                    hdr.set(header::ContentType("application/opensearchdescription+xml"
+                        .parse()
+                        .unwrap()));
+                }
+                _ => {
+                    let hdr = res.headers_mut();
+                    hdr.set(header::ContentType("text/html".parse().unwrap()));
+                }
+            }
+            res.send(&resp.body.into_bytes()).unwrap()
+        })
+        .unwrap();
 }
