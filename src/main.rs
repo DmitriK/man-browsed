@@ -9,10 +9,11 @@ fn manhandle(req: Request, res: Response) {
     use hyper::uri::RequestUri::*;
     match req.uri {
         AbsolutePath(s) => {
-            let term = String::from(s.trim_left_matches("/?p="));
-            match term.as_ref() {
-                "" => {res.send(landing::HTML).unwrap();}
-                _ => {res.send(&gen_man_html(&term).into_bytes()).unwrap();}
+            let term = s.trim_left_matches("/?p=");
+            if term == s || term == "" {
+                res.send(landing::HTML).unwrap();
+            } else {
+                res.send(&gen_man_html(&term).into_bytes()).unwrap();
             }
         }
         _ => {
