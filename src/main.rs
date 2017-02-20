@@ -76,7 +76,7 @@ fn gen_man_html(page: &str) -> String {
     use std::process::{Command, Stdio};
     let words: Vec<&str> = page.split('+').collect();
 
-    let mandoc = Command::new("mandoc")
+    /*let mandoc = Command::new("mandoc")
         .arg("-Thtml")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -93,16 +93,16 @@ fn gen_man_html(page: &str) -> String {
 
             html
         }
-        Err(_) => {
-            let html = Command::new("man")
-                .arg("-Thtml")
-                .args(&words)
-                .output()
-                .expect("failed to execute process");
+        Err(_) => {*/
+    let html = Command::new("man")
+        .arg("-Thtml")
+        .args(&words)
+        .output()
+        .expect("failed to execute process");
 
-            String::from_utf8_lossy(&html.stdout).into_owned()
-        }
-    }
+    String::from_utf8_lossy(&html.stdout).into_owned()
+    /*}
+    }*/
 }
 
 fn main() {
