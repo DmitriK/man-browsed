@@ -72,15 +72,37 @@ fn manhandle(uri: hyper::uri::RequestUri, addr: String, port: u16) -> ManRespons
 }
 
 fn gen_man_html(page: &str) -> String {
-    use std::process::Command;
+    use std::io::{Read, Write};
+    use std::process::{Command, Stdio};
     let words: Vec<&str> = page.split('+').collect();
-    let html = Command::new("man")
-        .arg("-Thtml")
-        .args(&words)
-        .output()
-        .expect("failed to execute process");
 
-    String::from_utf8_lossy(&html.stdout).into_owned()
+    let mandoc = Command::new("mandoc")
+        .arg("-Thtml")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn();
+
+    match mandoc {
+        Ok(mandoc) => {
+            let manout = Command::new("man").args(&words).stdout(Stdio::piped()).output().unwrap();
+
+            mandoc.stdin.unwrap().write_all(&manout.stdout).unwrap();
+
+            let mut html: String = "".to_owned();
+            mandoc.stdout.unwrap().read_to_string(&mut html).unwrap();
+
+            html
+        }
+        Err(_) => {
+            let html = Command::new("man")
+                .arg("-Thtml")
+                .args(&words)
+                .output()
+                .expect("failed to execute process");
+
+            String::from_utf8_lossy(&html.stdout).into_owned()
+        }
+    }
 }
 
 fn main() {
