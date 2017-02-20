@@ -97,10 +97,10 @@ fn main() {
             .takes_value(true))
         .get_matches();
 
-    let addr = args.value_of("addr").unwrap_or("127.0.0.1").to_string();
+    let addr = args.value_of("addr").unwrap_or("127.0.0.1");
     let port = args.value_of("port").unwrap_or("").parse::<u16>().unwrap_or(53805);
 
-    let addr2 = addr.clone();
+    let addr_lt = addr.to_string();
 
     let mut router = Router::new();
     router.get("/os.xml",
@@ -108,7 +108,7 @@ fn main() {
         let ct = "application/opensearchdescription+xml".parse::<mime::Mime>().unwrap();
         Ok(Response::with((ct,
                            status::Ok,
-                           landing::OSEARCH.replace("$addr", &addr)
+                           landing::OSEARCH.replace("$addr", &addr_lt)
                                .replace("$port", &port.to_string()))))
     },
                "handler");
@@ -116,6 +116,6 @@ fn main() {
     router.get("/", manhandle, "query");
 
     Iron::new(router)
-        .http((&*addr2, port))
+        .http((addr, port))
         .unwrap();
 }
