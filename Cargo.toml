@@ -6,4 +6,5 @@ license = "GPLv3"
 
 [dependencies]
 clap  = "^2.20"
-hyper = "^0.10"
+iron = "^0.4"
+mime = "^0.2"

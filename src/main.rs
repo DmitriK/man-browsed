@@ -15,15 +15,14 @@
  */
 
 extern crate clap;
-extern crate hyper;
+extern crate iron;
+#[macro_use]
+extern crate mime;
 
 mod landing;
 
-use std::net::IpAddr;
-use std::str::FromStr;
-
-use hyper::header;
-use hyper::server::{Server, Request, Response};
+use iron::prelude::*;
+use iron::status;
 
 enum ResponseType {
     Landing,
@@ -37,35 +36,27 @@ struct ManResponse {
     body: String,
 }
 
-fn manhandle(uri: hyper::uri::RequestUri, addr: String, port: u16) -> ManResponse {
-    use hyper::uri::RequestUri::*;
-    match uri {
-        AbsolutePath(s) => {
-            let path = s.trim_left_matches("/");
-            if path == "os.xml" {
-                return ManResponse {
-                    res_type: ResponseType::OpenSearch,
-                    body: landing::OSEARCH.replace("$addr", &addr)
-                        .replace("$port", &port.to_string()),
-                };
-            }
-            let term = path.trim_left_matches("?q=");
-            if term == path || term == "" {
-                ManResponse {
-                    res_type: ResponseType::Landing,
-                    body: landing::HTML.to_string(),
-                }
-            } else {
-                ManResponse {
-                    res_type: ResponseType::ManPage,
-                    body: gen_man_html(&term),
-                }
+fn manhandle(url: &iron::Url, addr: String, port: u16) -> ManResponse {
+    if url.clone().into_generic_url().as_ref() == "os.xml" {
+        return ManResponse {
+            res_type: ResponseType::OpenSearch,
+            body: landing::OSEARCH.replace("$addr", &addr)
+                .replace("$port", &port.to_string()),
+        };
+    }
+
+    match url.query() {
+        Some(q) => {
+            let term = q.trim_left_matches("q=");
+            ManResponse {
+                res_type: ResponseType::ManPage,
+                body: gen_man_html(&term),
             }
         }
-        _ => {
+        None => {
             ManResponse {
-                res_type: ResponseType::ErrPage,
-                body: "Error: Could not understand request".to_string(),
+                res_type: ResponseType::Landing,
+                body: landing::HTML.to_string(),
             }
         }
     }
@@ -130,24 +121,22 @@ fn main() {
     let addr = args.value_of("addr").unwrap_or("127.0.0.1").to_string();
     let port = args.value_of("port").unwrap_or("").parse::<u16>().unwrap_or(53805);
 
-    let serve = Server::http((IpAddr::from_str(&addr).unwrap(), port)).unwrap();
-    let addr = addr;
-    serve.handle(move |req: Request, mut res: Response| {
-            let resp = manhandle(req.uri, addr.clone(), port);
+    let addr2 = addr.clone();
+
+    Iron::new(move |req: &mut Request| {
+            let resp = manhandle(&req.url, addr.clone(), port);
 
             match resp.res_type {
                 ResponseType::OpenSearch => {
-                    let hdr = res.headers_mut();
-                    hdr.set(header::ContentType("application/opensearchdescription+xml"
-                        .parse()
-                        .unwrap()));
+                    let ct = "application/opensearchdescription+xml".parse::<mime::Mime>().unwrap();
+                    Ok(Response::with((ct, status::Ok, resp.body)))
                 }
                 _ => {
-                    let hdr = res.headers_mut();
-                    hdr.set(header::ContentType("text/html".parse().unwrap()));
+                    let ct = mime!(Text / Html);
+                    Ok(Response::with((ct, status::Ok, resp.body)))
                 }
             }
-            res.send(&resp.body.into_bytes()).unwrap()
         })
+        .http((&*addr2, port))
         .unwrap();
 }
