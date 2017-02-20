@@ -54,7 +54,10 @@ fn gen_man_html(page: &str) -> String {
 
             let html = Command::new("mandoc")
                 .arg("-Thtml")
+                .arg("-O")
+                .arg("man=/?q=%S+%N")
                 .arg(String::from_utf8_lossy(&manout).into_owned().trim())
+                .stderr(Stdio::inherit())
                 .output()
                 .unwrap();
 
