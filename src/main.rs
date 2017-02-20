@@ -26,13 +26,14 @@ use iron::{Iron, Request, Response, IronResult};
 use iron::status;
 use router::Router;
 
-fn manhandle(url: &iron::Url, addr: String, port: u16) -> String {
-    match url.query() {
+fn manhandle(req: &mut Request) -> IronResult<Response> {
+    let ct = mime!(Text / Html);
+    match req.url.query() {
         Some(q) => {
             let term = q.trim_left_matches("q=");
-            gen_man_html(&term)
+            Ok(Response::with((ct, status::Ok, gen_man_html(&term))))
         }
-        None => landing::HTML.to_string(),
+        None => Ok(Response::with((ct, status::Ok, landing::HTML.to_string()))),
     }
 }
 
@@ -97,9 +98,7 @@ fn main() {
     let addr = args.value_of("addr").unwrap_or("127.0.0.1").to_string();
     let port = args.value_of("port").unwrap_or("").parse::<u16>().unwrap_or(53805);
 
-    let addr = addr.clone();
     let addr2 = addr.clone();
-    let addr3 = addr.clone();
 
     let mut router = Router::new();
     router.get("/os.xml",
@@ -112,15 +111,9 @@ fn main() {
     },
                "handler");
 
-    router.get("/",
-               move |req: &mut Request| {
-                   let resp = manhandle(&req.url, addr2.clone(), port);
-                   let ct = mime!(Text / Html);
-                   Ok(Response::with((ct, status::Ok, resp)))
-               },
-               "query");
+    router.get("/", manhandle, "query");
 
     Iron::new(router)
-        .http((&*addr3, port))
+        .http((&*addr2, port))
         .unwrap();
 }
