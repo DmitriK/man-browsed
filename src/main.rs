@@ -18,47 +18,21 @@ extern crate clap;
 extern crate iron;
 #[macro_use]
 extern crate mime;
+extern crate router;
 
 mod landing;
 
-use iron::prelude::*;
+use iron::{Iron, Request, Response, IronResult};
 use iron::status;
+use router::Router;
 
-enum ResponseType {
-    Landing,
-    ManPage,
-    ErrPage,
-    OpenSearch,
-}
-
-struct ManResponse {
-    res_type: ResponseType,
-    body: String,
-}
-
-fn manhandle(url: &iron::Url, addr: String, port: u16) -> ManResponse {
-    if url.clone().into_generic_url().as_ref() == "os.xml" {
-        return ManResponse {
-            res_type: ResponseType::OpenSearch,
-            body: landing::OSEARCH.replace("$addr", &addr)
-                .replace("$port", &port.to_string()),
-        };
-    }
-
+fn manhandle(url: &iron::Url, addr: String, port: u16) -> String {
     match url.query() {
         Some(q) => {
             let term = q.trim_left_matches("q=");
-            ManResponse {
-                res_type: ResponseType::ManPage,
-                body: gen_man_html(&term),
-            }
+            gen_man_html(&term)
         }
-        None => {
-            ManResponse {
-                res_type: ResponseType::Landing,
-                body: landing::HTML.to_string(),
-            }
-        }
+        None => landing::HTML.to_string(),
     }
 }
 
@@ -121,22 +95,30 @@ fn main() {
     let addr = args.value_of("addr").unwrap_or("127.0.0.1").to_string();
     let port = args.value_of("port").unwrap_or("").parse::<u16>().unwrap_or(53805);
 
+    let addr = addr.clone();
     let addr2 = addr.clone();
+    let addr3 = addr.clone();
 
-    Iron::new(move |req: &mut Request| {
-            let resp = manhandle(&req.url, addr.clone(), port);
+    let mut router = Router::new();
+    router.get("/os.xml",
+               move |_: &mut Request| {
+        let ct = "application/opensearchdescription+xml".parse::<mime::Mime>().unwrap();
+        Ok(Response::with((ct,
+                           status::Ok,
+                           landing::OSEARCH.replace("$addr", &addr)
+                               .replace("$port", &port.to_string()))))
+    },
+               "handler");
 
-            match resp.res_type {
-                ResponseType::OpenSearch => {
-                    let ct = "application/opensearchdescription+xml".parse::<mime::Mime>().unwrap();
-                    Ok(Response::with((ct, status::Ok, resp.body)))
-                }
-                _ => {
-                    let ct = mime!(Text / Html);
-                    Ok(Response::with((ct, status::Ok, resp.body)))
-                }
-            }
-        })
-        .http((&*addr2, port))
+    router.get("/",
+               move |req: &mut Request| {
+                   let resp = manhandle(&req.url, addr2.clone(), port);
+                   let ct = mime!(Text / Html);
+                   Ok(Response::with((ct, status::Ok, resp)))
+               },
+               "query");
+
+    Iron::new(router)
+        .http((&*addr3, port))
         .unwrap();
 }
