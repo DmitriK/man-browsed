@@ -37,37 +37,39 @@ fn manhandle(url: &iron::Url, addr: String, port: u16) -> String {
 }
 
 fn gen_man_html(page: &str) -> String {
-    use std::io::{Read, Write};
     use std::process::{Command, Stdio};
     let words: Vec<&str> = page.split('+').collect();
 
-    /*let mandoc = Command::new("mandoc")
-        .arg("-Thtml")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn();
+    let mandoc = Command::new("mandoc").spawn();
 
     match mandoc {
-        Ok(mandoc) => {
-            let manout = Command::new("man").args(&words).stdout(Stdio::piped()).output().unwrap();
+        Ok(_) => {
+            let manout = Command::new("man")
+                .arg("-w")
+                .args(&words)
+                .stdout(Stdio::piped())
+                .output()
+                .unwrap()
+                .stdout;
 
-            mandoc.stdin.unwrap().write_all(&manout.stdout).unwrap();
+            let html = Command::new("mandoc")
+                .arg("-Thtml")
+                .arg(String::from_utf8_lossy(&manout).into_owned().trim())
+                .output()
+                .unwrap();
 
-            let mut html: String = "".to_owned();
-            mandoc.stdout.unwrap().read_to_string(&mut html).unwrap();
-
-            html
+            String::from_utf8_lossy(&html.stdout).into_owned()
         }
-        Err(_) => {*/
-    let html = Command::new("man")
-        .arg("-Thtml")
-        .args(&words)
-        .output()
-        .expect("failed to execute process");
+        Err(_) => {
+            let html = Command::new("man")
+                .arg("-Thtml")
+                .args(&words)
+                .output()
+                .expect("failed to execute process");
 
-    String::from_utf8_lossy(&html.stdout).into_owned()
-    /*}
-    }*/
+            String::from_utf8_lossy(&html.stdout).into_owned()
+        }
+    }
 }
 
 fn main() {
