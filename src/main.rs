@@ -18,12 +18,14 @@ extern crate clap;
 extern crate iron;
 #[macro_use]
 extern crate mime;
+extern crate regex;
 extern crate router;
 
 mod landing;
 
 use iron::{Iron, Request, Response, IronResult};
 use iron::status;
+use regex::Regex;
 use router::Router;
 
 fn manhandle(req: &mut Request) -> IronResult<Response> {
@@ -62,16 +64,30 @@ fn gen_man_html(page: &str) -> String {
                 .output()
                 .unwrap();
 
-            String::from_utf8_lossy(&html.stdout).into_owned()
+            let html = String::from_utf8_lossy(&html.stdout);
+
+            let link_finder = Regex::new(r"<b>([^ ]+)</b>\(\d\)").unwrap();
+            let html = link_finder.replace_all(&html, "<a href=\"/?$2+$1\">$0</a>");
+
+            html.into_owned()
         }
         Err(_) => {
             let html = Command::new("man")
                 .arg("-Thtml")
                 .args(&words)
                 .output()
-                .expect("failed to execute process");
+                .expect("failed to execute process")
+                .stdout;
 
-            String::from_utf8_lossy(&html.stdout).into_owned()
+            let html = String::from_utf8_lossy(&html);
+
+            let link_finder = Regex::new(r"<b>([^ ]+)</b>\(\d\)").unwrap();
+            let html = link_finder.replace_all(&html, "<a href=\"/?$2+$1\">$0</a>");
+
+            let link_finder = Regex::new(r"file://[^\s<>]+").unwrap();
+            let html = link_finder.replace_all(&html, "<a href=\"$0\">$0</a>");
+
+            html.into_owned()
         }
     }
 }
