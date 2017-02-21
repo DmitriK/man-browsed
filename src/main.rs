@@ -41,7 +41,8 @@ fn gen_man_html(page: &str) -> String {
     use std::process::{Command, Stdio};
     let words: Vec<&str> = page.split('+').collect();
 
-    let mandoc = Command::new("mandoc").arg("-V").stdout(Stdio::null()).status();
+    let mandoc =
+        Command::new("mandoc").arg("-V").stdout(Stdio::null()).stderr(Stdio::null()).status();
 
     match mandoc {
         Ok(_) => {
