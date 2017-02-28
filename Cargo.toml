@@ -10,3 +10,6 @@ iron = "^0.5"
 mime = "^0.2"
 regex = "^0.2"
 router = "^0.5"
+
+[profile.release]
+lto = true
