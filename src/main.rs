@@ -132,7 +132,19 @@ fn main() {
 
     router.get("/", manhandle, "query");
 
-    Iron::new(router)
-        .http((addr, port))
-        .unwrap();
+    match Iron::new(router).http((addr, port)) {
+        Err(iron::error::HttpError::Io(e)) => {
+            if e.kind() == std::io::ErrorKind::AddrInUse {
+                println!("Something is already listening on {:}:{:}; \
+                          Perhaps the service is already running?",
+                         addr,
+                         port);
+                std::process::exit(1);
+            } else {
+                panic!(e);
+            }
+        }
+        Err(e) => panic!(e),
+        Ok(_) => {}
+    }
 }
